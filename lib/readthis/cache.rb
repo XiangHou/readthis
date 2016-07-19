@@ -49,6 +49,10 @@ module Readthis
         Redis.new(options.fetch(:redis, {}))
       end
 
+      @slave_pool = ConnectionPool.new(pool_options(options)) do
+        Redis.new(options.fetch(:slave_redis, {}))
+      end
+
       @scripts = Readthis::Scripts.new
     end
 
@@ -411,8 +415,14 @@ module Readthis
     end
 
     def invoke(operation, key, &block)
-      instrument(operation, key) do
-        pool.with(&block)
+      if key == :read || key == :read_multi
+        instrument(operation, key) do
+          @slave_pool.with(&block)
+        end
+      else
+        instrument(operation, key) do
+          pool.with(&block)
+        end
       end
     rescue Redis::BaseError => error
       raise error unless Readthis.fault_tolerant?
