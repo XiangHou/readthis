@@ -7,7 +7,7 @@ require 'connection_pool'
 
 module Readthis
   class Cache
-    attr_reader :entity, :notifications, :options, :pool, :scripts
+    attr_reader :entity, :notifications, :options, :pool, :slave_pool, :scripts
 
     # Provide a class level lookup of the proper notifications module.
     # Instrumention is expected to occur within applications that have
@@ -415,9 +415,9 @@ module Readthis
     end
 
     def invoke(operation, key, &block)
-      if key == :read || key == :read_multi
+      if operation == :read || operation == :read_multi
         instrument(operation, key) do
-          @slave_pool.with(&block)
+          slave_pool.with(&block)
         end
       else
         instrument(operation, key) do
